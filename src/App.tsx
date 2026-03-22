@@ -146,7 +146,7 @@ function TrackRow({ hit, downloadState, onDownload, onDisk, index = 0 }: {
   hit: YtHit
   downloadState: DownloadState | null
   onDownload: (hit: YtHit) => void
-  /** Present in Music/mulib (from disk scan). */
+  /** Present in library (from disk scan). */
   onDisk: boolean
   index?: number
 }) {
@@ -191,7 +191,7 @@ function TrackRow({ hit, downloadState, onDownload, onDisk, index = 0 }: {
         {isDone && (
           <div className="trackDoneMsg">
             <CheckIcon />
-            <span>In Music/mulib</span>
+            <span>In library</span>
           </div>
         )}
 
@@ -210,7 +210,7 @@ function TrackRow({ hit, downloadState, onDownload, onDisk, index = 0 }: {
           onClick={() => onDownload(hit)}
           disabled={isActive || isDone}
           aria-label={`Download ${hit.title}`}
-          title={isDone ? (onDisk ? 'Already in Music/mulib' : 'Downloaded') : 'Save to Music/mulib'}
+          title={isDone ? (onDisk ? 'Already in library' : 'Downloaded') : 'Save to library'}
         >
           {isDone ? <CheckIcon /> : <DownloadIcon />}
         </button>
@@ -304,7 +304,7 @@ function AlbumRow({
             type="button"
             className={`albumDownloadAllBtn ${albumDownloaded ? 'albumDownloadAllBtn--done' : ''}`}
             disabled={downloadAlbumDisabled}
-            title={albumDownloaded ? 'Album folder already in Music/mulib' : 'Download entire album'}
+            title={albumDownloaded ? 'Album folder already in library' : 'Download entire album'}
             onClick={(ev) => {
               ev.preventDefault()
               ev.stopPropagation()
@@ -350,7 +350,7 @@ function AlbumRow({
                     onClick={() => onDownloadTrack(hit, album)}
                     disabled={isActive || isDone}
                     aria-label={`Download ${hit.title}`}
-                    title={isDone ? 'Already in Music/mulib' : `Download ${hit.title}`}
+                    title={isDone ? 'Already in library' : `Download ${hit.title}`}
                   >
                     {isDone ? <CheckIcon /> : <DownloadIcon />}
                   </button>
