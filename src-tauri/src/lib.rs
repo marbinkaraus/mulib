@@ -99,6 +99,20 @@ fn download_script_path(app: &AppHandle) -> Result<PathBuf, String> {
     .map_err(|e| format!("failed to resolve download script: {e}"))
 }
 
+fn album_search_script_path(app: &AppHandle) -> Result<PathBuf, String> {
+  app
+    .path()
+    .resolve("resources/ytmusic_album_search.py", tauri::path::BaseDirectory::Resource)
+    .map_err(|e| format!("failed to resolve album search script: {e}"))
+}
+
+fn album_tracks_script_path(app: &AppHandle) -> Result<PathBuf, String> {
+  app
+    .path()
+    .resolve("resources/ytmusic_album_tracks.py", tauri::path::BaseDirectory::Resource)
+    .map_err(|e| format!("failed to resolve album tracks script: {e}"))
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn is_dir_writable(path: &Path) -> bool {
@@ -139,6 +153,18 @@ fn sanitize_filename(s: &str) -> String {
     .to_string()
 }
 
+/// Same basename as `download_audio_track` uses for the output `.mp3` (for library scan matching).
+fn compute_mp3_filename(hit: &YtSearchHit) -> String {
+  let artist_part = hit.artist.as_deref().unwrap_or("").trim();
+  let safe_title = sanitize_filename(hit.title.trim());
+  let base_name = if artist_part.is_empty() {
+    safe_title
+  } else {
+    format!("{} - {}", sanitize_filename(artist_part), safe_title)
+  };
+  format!("{}.mp3", base_name)
+}
+
 fn default_music_dir(app: &AppHandle) -> PathBuf {
   if let Ok(p) = app.path().audio_dir() {
     return p;
@@ -147,6 +173,21 @@ fn default_music_dir(app: &AppHandle) -> PathBuf {
     return PathBuf::from(home).join("Music");
   }
   PathBuf::from("Music")
+}
+
+/// `Music/mulib/` — all Mulib downloads (songs flat, albums in subfolders).
+fn mulib_library_dir(app: &AppHandle) -> PathBuf {
+  default_music_dir(app).join("mulib")
+}
+
+/// `Music/mulib/{Album name}/` (album title only).
+fn album_dir_for_title(app: &AppHandle, album_title: &str) -> PathBuf {
+  let t = album_title.trim();
+  if t.is_empty() {
+    mulib_library_dir(app).join("_untitled_album")
+  } else {
+    mulib_library_dir(app).join(sanitize_filename(t))
+  }
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -163,6 +204,32 @@ struct YtSearchHit {
   thumbnail_url: Option<String>,
   year: Option<i64>,
   is_explicit: Option<bool>,
+  /// Output filename for `Music/mulib` matching (same rules as download).
+  #[serde(default)]
+  mp3_filename: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct YtAlbumSearchHit {
+  browse_id: String,
+  title: String,
+  artist: Option<String>,
+  year: Option<i64>,
+  thumbnail_url: Option<String>,
+  track_count: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum SearchResultItem {
+  Song {
+    #[serde(flatten)]
+    song: YtSearchHit,
+  },
+  Album {
+    #[serde(flatten)]
+    album: YtAlbumSearchHit,
+  },
 }
 
 #[derive(Clone, Serialize)]
@@ -181,6 +248,23 @@ struct YtDownloadFinishedPayload {
   last_lines: Vec<String>,
 }
 
+#[derive(Serialize, Clone, Debug)]
+struct MulibAlbumScan {
+  folder_name: String,
+  files: Vec<String>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+struct MulibLibraryScan {
+  root_mp3: Vec<String>,
+  albums: Vec<MulibAlbumScan>,
+}
+
+#[derive(Debug, Deserialize)]
+struct YtAlbumFolderHint {
+  album_title: String,
+}
+
 #[derive(Debug, Deserialize)]
 struct YtDownloadRequest {
   video_id: String,
@@ -195,6 +279,17 @@ struct YtDownloadRequest {
   output_dir: Option<String>,
   #[serde(default)]
   webpage_url: Option<String>,
+  /// When set, files go to `Music/mulib/{album_title}/` (single track from an album).
+  #[serde(default)]
+  album_folder: Option<YtAlbumFolderHint>,
+}
+
+#[derive(Debug, Deserialize)]
+struct YtDownloadAlbumRequest {
+  browse_id: String,
+  title: String,
+  #[serde(default)]
+  thumbnail_url: Option<String>,
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
@@ -233,63 +328,129 @@ fn ytdlp_check(app: AppHandle) -> Result<String, String> {
   Ok(ytdlp_ver)
 }
 
-/// Search YouTube Music using ytmusicapi (fast, no age-gate, full metadata).
-/// Returns up to `limit` song results with artist, album, duration, thumbnail.
-/// Async so the frontend can paint loading state before the blocking Python call runs.
-#[tauri::command]
-async fn ytdlp_search(
-  app: AppHandle,
-  query: String,
-  _music_catalog: Option<bool>,
-) -> Result<Vec<YtSearchHit>, String> {
-  let q = sanitize_yt_query(&query)?;
-  let runtime_dir = ensure_runtime_dir(&app)?;
-  let python = bundled_python_path(&runtime_dir);
-  let script = search_script_path(&app)?;
-  let site_packages = bundled_site_packages(&runtime_dir);
-
-  if !script.exists() {
-    return Err(format!("Search script not found at {}", script.display()));
-  }
-
-  let output = tokio::task::spawn_blocking(move || {
-    Command::new(&python)
-      .current_dir(&runtime_dir)
-      .env("PYTHONPATH", &site_packages)
-      .args([script.as_os_str(), std::ffi::OsStr::new(&q), std::ffi::OsStr::new("20")])
-      .output()
-      .map_err(|e| format!("search failed: {e}"))
-  })
-  .await
-  .map_err(|e| format!("search task failed: {e}"))??;
-
-  let stdout = String::from_utf8_lossy(&output.stdout);
-
-  // The script outputs one JSON object per line (NDJSON)
+fn parse_ndjson_songs(stdout: &str) -> Result<Vec<YtSearchHit>, String> {
   let mut hits: Vec<YtSearchHit> = Vec::new();
   for line in stdout.lines() {
     let line = line.trim();
     if line.is_empty() {
       continue;
     }
-    // Check if the script returned an error object
     if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
       if let Some(err) = v.get("error").and_then(|e| e.as_str()) {
         if hits.is_empty() {
           return Err(err.to_string());
         }
-        // Partial results — stop but return what we have
         break;
       }
-      if let Ok(hit) = serde_json::from_value::<YtSearchHit>(v) {
+      if let Ok(mut hit) = serde_json::from_value::<YtSearchHit>(v) {
+        hit.mp3_filename = compute_mp3_filename(&hit);
         hits.push(hit);
       }
     }
   }
+  Ok(hits)
+}
 
-  if hits.is_empty() {
-    // Surface stderr if we got nothing
-    let err = String::from_utf8_lossy(&output.stderr);
+fn parse_ndjson_albums(stdout: &str) -> Vec<YtAlbumSearchHit> {
+  let mut hits: Vec<YtAlbumSearchHit> = Vec::new();
+  for line in stdout.lines() {
+    let line = line.trim();
+    if line.is_empty() {
+      continue;
+    }
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+      if v.get("error").is_some() {
+        break;
+      }
+      if let Ok(hit) = serde_json::from_value::<YtAlbumSearchHit>(v) {
+        hits.push(hit);
+      }
+    }
+  }
+  hits
+}
+
+/// Search YouTube Music: song hits plus album hits in one response (songs first, then albums).
+#[tauri::command]
+async fn ytdlp_search(
+  app: AppHandle,
+  query: String,
+  _music_catalog: Option<bool>,
+) -> Result<Vec<SearchResultItem>, String> {
+  let q = sanitize_yt_query(&query)?;
+  let runtime_dir = ensure_runtime_dir(&app)?;
+  let python = bundled_python_path(&runtime_dir);
+  let song_script = search_script_path(&app)?;
+  let album_script = album_search_script_path(&app)?;
+  let site_packages = bundled_site_packages(&runtime_dir);
+
+  if !song_script.exists() {
+    return Err(format!("Search script not found at {}", song_script.display()));
+  }
+  if !album_script.exists() {
+    return Err(format!(
+      "Album search script not found at {}",
+      album_script.display()
+    ));
+  }
+
+  let q_a = q.clone();
+  let runtime_a = runtime_dir.clone();
+  let python_a = python.clone();
+  let album_a = album_script.clone();
+  let site_a = site_packages.clone();
+
+  let (song_output, album_stdout) = tokio::task::spawn_blocking(move || {
+    let song_output = Command::new(&python)
+      .current_dir(&runtime_dir)
+      .env("PYTHONPATH", &site_packages)
+      .args([
+        song_script.as_os_str(),
+        std::ffi::OsStr::new(&q),
+        std::ffi::OsStr::new("20"),
+      ])
+      .output()
+      .map_err(|e| format!("song search failed: {e}"))?;
+
+    let album_result = Command::new(&python_a)
+      .current_dir(&runtime_a)
+      .env("PYTHONPATH", &site_a)
+      .args([
+        album_a.as_os_str(),
+        std::ffi::OsStr::new(&q_a),
+        std::ffi::OsStr::new("8"),
+      ])
+      .output();
+
+    let album_stdout = match album_result {
+      Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
+      Err(_) => String::new(),
+    };
+
+    Ok::<_, String>((song_output, album_stdout))
+  })
+  .await
+  .map_err(|e| format!("search task failed: {e}"))??;
+
+  let song_stdout = String::from_utf8_lossy(&song_output.stdout);
+  let songs = parse_ndjson_songs(&song_stdout);
+
+  let mut items: Vec<SearchResultItem> = Vec::new();
+  if let Ok(ref song_hits) = songs {
+    for h in song_hits {
+      items.push(SearchResultItem::Song { song: h.clone() });
+    }
+  }
+
+  for a in parse_ndjson_albums(&album_stdout) {
+    items.push(SearchResultItem::Album { album: a });
+  }
+
+  if items.is_empty() {
+    if let Err(e) = songs {
+      return Err(e);
+    }
+    let err = String::from_utf8_lossy(&song_output.stderr);
     let msg = err.trim();
     return Err(if msg.is_empty() {
       "No results found. Try a different search.".to_string()
@@ -298,20 +459,123 @@ async fn ytdlp_search(
     });
   }
 
-  Ok(hits)
+  Ok(items)
+}
+
+async fn fetch_album_tracks(app: &AppHandle, browse_id: &str) -> Result<Vec<YtSearchHit>, String> {
+  let bid = browse_id.trim().to_string();
+  if bid.is_empty() || !bid.starts_with("MPRE") {
+    return Err("Invalid album id".to_string());
+  }
+
+  let runtime_dir = ensure_runtime_dir(app)?;
+  let python = bundled_python_path(&runtime_dir);
+  let script = album_tracks_script_path(app)?;
+  let site_packages = bundled_site_packages(&runtime_dir);
+
+  if !script.exists() {
+    return Err(format!(
+      "Album tracks script not found at {}",
+      script.display()
+    ));
+  }
+
+  let output = tokio::task::spawn_blocking(move || {
+    Command::new(&python)
+      .current_dir(&runtime_dir)
+      .env("PYTHONPATH", &site_packages)
+      .args([script.as_os_str(), std::ffi::OsStr::new(&bid)])
+      .output()
+      .map_err(|e| format!("album tracks failed: {e}"))
+  })
+  .await
+  .map_err(|e| format!("album tracks task failed: {e}"))??;
+
+  let stdout = String::from_utf8_lossy(&output.stdout);
+  let hits = parse_ndjson_songs(&stdout);
+  match hits {
+    Ok(v) if !v.is_empty() => Ok(v),
+    Ok(_) => {
+      let err = String::from_utf8_lossy(&output.stderr);
+      let msg = err.trim();
+      Err(if msg.is_empty() {
+        "Could not load album tracks.".to_string()
+      } else {
+        msg.to_string()
+      })
+    }
+    Err(e) => Err(e),
+  }
+}
+
+/// List tracks for an album browse id (for the expandable album UI).
+#[tauri::command]
+async fn ytdlp_get_album_tracks(app: AppHandle, browse_id: String) -> Result<Vec<YtSearchHit>, String> {
+  fetch_album_tracks(&app, &browse_id).await
+}
+
+/// Download every track in an album into `Music/mulib/{Album name}/`.
+#[tauri::command]
+async fn ytdlp_download_album(request: YtDownloadAlbumRequest, app: AppHandle) -> Result<(), String> {
+  let browse_id = request.browse_id.trim().to_string();
+  if browse_id.is_empty() || !browse_id.starts_with("MPRE") {
+    return Err("Invalid album id".to_string());
+  }
+
+  let tracks = fetch_album_tracks(&app, &browse_id).await?;
+  if tracks.is_empty() {
+    return Err("No playable tracks in this album.".to_string());
+  }
+
+  let album_title = request.title.trim().to_string();
+  let album_dir = album_dir_for_title(&app, &album_title);
+  if !is_dir_writable(&album_dir) {
+    return Err(format!(
+      "Album folder is not writable: {}",
+      album_dir.display()
+    ));
+  }
+
+  let album_thumb = request.thumbnail_url.clone();
+
+  for track in tracks {
+    let req = YtDownloadRequest {
+      video_id: track.video_id.clone(),
+      title: track.title.clone(),
+      artist: track.artist.clone(),
+      album: Some(album_title.clone()),
+      thumbnail_url: track
+        .thumbnail_url
+        .clone()
+        .or_else(|| album_thumb.clone()),
+      output_dir: Some(album_dir.to_string_lossy().into_owned()),
+      webpage_url: Some(track.webpage_url.clone()),
+      album_folder: None,
+    };
+    download_audio_track(app.clone(), req).await?;
+  }
+
+  Ok(())
 }
 
 /// Download audio via the ytmusic_download.py script.
 /// The script handles: yt-dlp audio extraction → iTunes cover download → ffmpeg embed.
-#[tauri::command]
-async fn ytdlp_download_audio(request: YtDownloadRequest, app: AppHandle) -> Result<(), String> {
-  let output_dir = request
-    .output_dir
-    .as_ref()
-    .map(|s| s.trim().to_string())
-    .filter(|s| !s.is_empty())
-    .map(PathBuf::from)
-    .unwrap_or_else(|| default_music_dir(&app));
+async fn download_audio_track(app: AppHandle, request: YtDownloadRequest) -> Result<(), String> {
+  let output_dir = if let Some(ref hint) = request.album_folder {
+    let title = hint.album_title.trim();
+    if title.is_empty() {
+      return Err("Album title is required for album folder downloads.".to_string());
+    }
+    album_dir_for_title(&app, title)
+  } else {
+    request
+      .output_dir
+      .as_ref()
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .map(PathBuf::from)
+      .unwrap_or_else(|| mulib_library_dir(&app))
+  };
 
   if !is_dir_writable(&output_dir) {
     return Err(format!(
@@ -483,6 +747,69 @@ async fn ytdlp_download_audio(request: YtDownloadRequest, app: AppHandle) -> Res
   Ok(())
 }
 
+#[tauri::command]
+async fn ytdlp_download_audio(request: YtDownloadRequest, app: AppHandle) -> Result<(), String> {
+  download_audio_track(app, request).await
+}
+
+/// Scan `Music/mulib`: root `*.mp3` (singles) and one subfolder per album with track files.
+/// Used to persist “already downloaded” UI across sessions.
+#[tauri::command]
+fn mulib_scan_library(app: AppHandle) -> Result<MulibLibraryScan, String> {
+  let root = mulib_library_dir(&app);
+  if !root.exists() {
+    return Ok(MulibLibraryScan {
+      root_mp3: Vec::new(),
+      albums: Vec::new(),
+    });
+  }
+
+  let mut root_mp3 = Vec::new();
+  let mut albums = Vec::new();
+
+  for entry in fs::read_dir(&root).map_err(|e| e.to_string())? {
+    let entry = entry.map_err(|e| e.to_string())?;
+    let path = entry.path();
+    let name = entry.file_name().to_string_lossy().to_string();
+    if name.starts_with('.') {
+      continue;
+    }
+
+    if path.is_file() {
+      if path
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("mp3"))
+      {
+        root_mp3.push(name);
+      }
+      continue;
+    }
+
+    if path.is_dir() {
+      let mut files = Vec::new();
+      for sub in fs::read_dir(&path).map_err(|e| format!("read {}: {e}", path.display()))? {
+        let sub = sub.map_err(|e| e.to_string())?;
+        let p = sub.path();
+        if p.is_file()
+          && p.extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| e.eq_ignore_ascii_case("mp3"))
+        {
+          files.push(sub.file_name().to_string_lossy().to_string());
+        }
+      }
+      files.sort();
+      albums.push(MulibAlbumScan { folder_name: name, files });
+    }
+  }
+
+  root_mp3.sort();
+  albums.sort_by(|a, b| a.folder_name.cmp(&b.folder_name));
+
+  Ok(MulibLibraryScan { root_mp3, albums })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -491,7 +818,10 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       ytdlp_check,
       ytdlp_search,
+      ytdlp_get_album_tracks,
+      ytdlp_download_album,
       ytdlp_download_audio,
+      mulib_scan_library,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

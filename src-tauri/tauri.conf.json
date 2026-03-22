@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' https://i.ytimg.com https://*.mzstatic.com data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'"
+      "csp": "default-src 'self'; img-src 'self' https://i.ytimg.com https://*.mzstatic.com https://*.googleusercontent.com https://*.ggpht.com data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'"
     }
   },
   "bundle": {
@@ -37,6 +37,8 @@
     "resources": [
       "resources/python-runtime/**/*",
       "resources/ytmusic_search.py",
+      "resources/ytmusic_album_search.py",
+      "resources/ytmusic_album_tracks.py",
       "resources/ytmusic_download.py",
       "resources/ffmpeg",
       "resources/ffprobe"
