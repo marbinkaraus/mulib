@@ -1,0 +1,659 @@
+/* ── Tokens ──────────────────────────────────────────────── */
+
+:root {
+  --paper: oklch(96.5% 0.012 75);
+  --paper-2: oklch(93.5% 0.016 75);
+  --ink: oklch(22% 0.018 60);
+  --ink-2: oklch(42% 0.014 60);
+  --ink-3: oklch(62% 0.010 60);
+  --rule: oklch(84% 0.014 70);
+  --rule-2: oklch(78% 0.018 70);
+  --red: oklch(50% 0.18 22);
+  --red-bg: oklch(96% 0.03 22);
+  --green: oklch(46% 0.13 150);
+
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
+
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+/* ── Shell ───────────────────────────────────────────────── */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* ── Titlebar ────────────────────────────────────────────── */
+
+.appHeader {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  /* 80px clears the macOS traffic lights */
+  padding: 0 2rem 0 80px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--rule);
+  user-select: none;
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  z-index: 100;
+}
+
+.appBrand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  flex: 1;
+}
+
+.appBrandName {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.appBrandSub {
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ── Runtime status dot / label ──────────────────────────── */
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDot--ok {
+  background: var(--green);
+}
+
+.statusLabel {
+  font-family: var(--sans);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.statusLabel--loading {
+  color: var(--ink-3);
+  background: color-mix(in oklch, var(--ink) 6%, var(--paper));
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.statusLabel--error {
+  color: var(--red);
+  background: color-mix(in oklch, var(--red) 10%, var(--paper));
+  border: 1px solid color-mix(in oklch, var(--red) 25%, var(--paper));
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.statusLabel--error:hover {
+  background: color-mix(in oklch, var(--red) 16%, var(--paper));
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ── Main ────────────────────────────────────────────────── */
+
+.appMain {
+  flex: 1;
+  padding: 2rem 2rem 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Search area ─────────────────────────────────────────── */
+
+.searchSection {
+  padding-bottom: 2rem;
+}
+
+.searchRow {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1.5px solid var(--ink);
+  transition: border-color 0.2s var(--ease-out);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.5rem 0.55rem 0;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  outline: none;
+  -webkit-appearance: none;
+  line-height: 1.3;
+}
+
+.searchInput::placeholder {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.searchInput::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.searchBtn {
+  flex-shrink: 0;
+  padding: 0 0 0.1rem;
+  background: transparent;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s var(--ease-out), transform 0.12s var(--ease-out);
+}
+
+.searchBtn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.searchBtn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.searchBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.searchBtn:disabled.searchBtn--searching {
+  opacity: 1;
+}
+
+.searchPulseDots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 18px;
+}
+
+.searchPulseDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+  opacity: 0.9;
+  animation: searchPulse 0.7s ease-in-out infinite both;
+}
+
+.searchPulseDot:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.searchPulseDot:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.searchPulseDot:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes searchPulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Status line ─────────────────────────────────────────── */
+
+.globalStatus {
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  font-style: italic;
+  animation: statusFadeIn 0.25s var(--ease-out) both;
+}
+
+@keyframes statusFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Error ───────────────────────────────────────────────── */
+
+.errorBanner {
+  margin-top: 1.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--red);
+  border-bottom: 1px solid var(--red);
+  font-size: 0.82rem;
+  color: var(--red);
+  line-height: 1.5;
+}
+
+.errorBanner--runtime {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  word-break: break-word;
+}
+
+/* ── Track list ──────────────────────────────────────────── */
+
+.trackList {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+  animation: trackListEnter 0.4s var(--ease-out) both;
+}
+
+@keyframes trackListEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Track row ───────────────────────────────────────────── */
+
+.trackRow {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 0.875rem;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  border-bottom: 1px solid var(--rule);
+  transition: background 0.15s var(--ease-out);
+  animation: trackRowEnter 0.35s var(--ease-out) both;
+}
+
+@keyframes trackRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trackRow:hover {
+  background: var(--paper-2);
+}
+
+.trackRow:last-child {
+  border-bottom: none;
+}
+
+/* ── Thumbnail ───────────────────────────────────────────── */
+
+.trackThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--paper-2);
+}
+
+.trackThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.trackThumbPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rule-2);
+}
+
+/* ── Track info ──────────────────────────────────────────── */
+
+.trackInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.trackTitle {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trackMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: var(--ink-3);
+  line-height: 1.3;
+}
+
+.trackArtist {
+  color: var(--ink-2);
+}
+
+.trackAlbum {
+  font-style: italic;
+}
+
+.trackMetaDot {
+  opacity: 0.35;
+  margin: 0 0.05rem;
+}
+
+.trackYear {
+  color: var(--ink-3);
+}
+
+.trackExplicit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--ink-3);
+  color: var(--ink-3);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  flex-shrink: 0;
+  margin-left: 0.15rem;
+}
+
+/* ── Track progress ──────────────────────────────────────── */
+
+.trackProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+}
+
+.trackProgressBar {
+  height: 2px;
+  background: var(--rule);
+  overflow: hidden;
+  position: relative;
+}
+
+.trackProgressFill {
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.35s ease;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.trackProgressFill[data-indeterminate='true'] {
+  width: 30%;
+  animation: sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% {
+    left: -30%;
+  }
+
+  100% {
+    left: 110%;
+  }
+}
+
+.trackProgressLabel {
+  font-size: 0.7rem;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+/* ── Done / failed ───────────────────────────────────────── */
+
+.trackDoneMsg {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--green);
+  margin-top: 0.2rem;
+  letter-spacing: 0.02em;
+}
+
+.trackFailedMsg {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 300;
+  color: var(--red);
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.trackRetryBtn {
+  flex-shrink: 0;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid color-mix(in oklch, var(--red) 50%, var(--rule));
+  border-radius: 2px;
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 0.68rem;
+  font-family: var(--sans);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.trackRetryBtn:hover {
+  background: color-mix(in oklch, var(--red) 12%, transparent);
+}
+
+/* ── Track right ─────────────────────────────────────────── */
+
+.trackRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.trackDuration {
+  font-size: 0.72rem;
+  font-weight: 300;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.trackDownloadBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--rule-2);
+  background: var(--paper-2);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  flex-shrink: 0;
+}
+
+.trackDownloadBtn:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--paper-2);
+  transform: translateY(-1px);
+}
+
+.trackDownloadBtn:active:not(:disabled) {
+  transform: scale(0.91);
+}
+
+.trackDownloadBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.trackRow[data-status='done'] .trackDownloadBtn {
+  border-color: color-mix(in oklch, var(--green) 45%, var(--rule));
+  background: color-mix(in oklch, var(--green) 8%, var(--paper));
+  color: var(--green);
+  opacity: 1;
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2.5rem 0 4rem;
+  gap: 0.6rem;
+}
+
+.emptyStateHeading {
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.emptyStateText {
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: var(--ink-3);
+  line-height: 1.6;
+  max-width: 34ch;
+}
+
+/* ── Focus ───────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.searchInput:focus-visible {
+  outline: none;
+}
+
+.trackDownloadBtn:focus-visible {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .searchPulseDot {
+    opacity: 1;
+  }
+}
