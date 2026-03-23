@@ -21,7 +21,14 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' https://i.ytimg.com https://*.mzstatic.com https://*.googleusercontent.com https://*.ggpht.com data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'"
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$HOME/Music/mulib/**",
+          "$AUDIO/mulib/**"
+        ]
+      },
+      "csp": "default-src 'self'; img-src 'self' https://i.ytimg.com https://*.mzstatic.com https://*.googleusercontent.com https://*.ggpht.com data: blob:; media-src 'self' asset: http://asset.localhost https://asset.localhost; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'"
     }
   },
   "bundle": {

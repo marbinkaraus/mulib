@@ -7,6 +7,7 @@ import {
   type MulibLibraryScan,
   songFileOnDisk,
 } from './mulibPaths'
+import { NowPlayingBar, useMusicPlayer } from './musicPlayer'
 import './App.css'
 
 interface YtHit {
@@ -91,6 +92,22 @@ function CheckIcon() {
   )
 }
 
+function RowPlayIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  )
+}
+
+function RowPauseIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+    </svg>
+  )
+}
+
 function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg className="albumChevron" data-open={open ? 'true' : 'false'} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -142,12 +159,15 @@ function computeAlbumBulkLine(
   return { progress: null, label: `Starting… (${total} tracks)` }
 }
 
-function TrackRow({ hit, downloadState, onDownload, onDisk, index = 0 }: {
+function TrackRow({ hit, downloadState, onDownload, onDisk, onPlay, activeVideoId, isPlayingAudio, index = 0 }: {
   hit: YtHit
   downloadState: DownloadState | null
   onDownload: (hit: YtHit) => void
   /** Present in library (from disk scan). */
   onDisk: boolean
+  onPlay?: (hit: YtHit) => void
+  activeVideoId?: string | null
+  isPlayingAudio?: boolean
   index?: number
 }) {
   const status = downloadState?.status ?? 'idle'
@@ -156,6 +176,7 @@ function TrackRow({ hit, downloadState, onDownload, onDisk, index = 0 }: {
   const isActive = status === 'finding' || status === 'downloading' || status === 'converting' || status === 'saving' || status === 'queued'
   const isDone = status === 'done' || onDisk
   const isFailed = status === 'failed'
+  const active = activeVideoId === hit.video_id
 
   return (
     <div className="trackRow" data-status={status} role="listitem" style={{ animationDelay: `${index * 45}ms` }}>
@@ -205,15 +226,28 @@ function TrackRow({ hit, downloadState, onDownload, onDisk, index = 0 }: {
 
       <div className="trackRight">
         <span className="trackDuration">{hit.duration_label}</span>
-        <button
-          className="trackDownloadBtn"
-          onClick={() => onDownload(hit)}
-          disabled={isActive || isDone}
-          aria-label={`Download ${hit.title}`}
-          title={isDone ? (onDisk ? 'Already in library' : 'Downloaded') : 'Save to library'}
-        >
-          {isDone ? <CheckIcon /> : <DownloadIcon />}
-        </button>
+        <div className="trackRowActions">
+          {onDisk && onPlay && (
+            <button
+              type="button"
+              className={`trackPlayBtn ${active && isPlayingAudio ? 'trackPlayBtn--active' : ''}`}
+              onClick={() => onPlay(hit)}
+              aria-label={active && isPlayingAudio ? `Pause ${hit.title}` : `Play ${hit.title}`}
+              title={active && isPlayingAudio ? 'Pause' : 'Play'}
+            >
+              {active && isPlayingAudio ? <RowPauseIcon /> : <RowPlayIcon />}
+            </button>
+          )}
+          <button
+            className="trackDownloadBtn"
+            onClick={() => onDownload(hit)}
+            disabled={isActive || isDone}
+            aria-label={`Download ${hit.title}`}
+            title={isDone ? (onDisk ? 'Already in library' : 'Downloaded') : 'Save to library'}
+          >
+            {isDone ? <CheckIcon /> : <DownloadIcon />}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -224,6 +258,9 @@ function AlbumRow({
   downloadStates,
   onDownloadAlbum,
   onDownloadTrack,
+  onPlayTrack,
+  activeVideoId,
+  isPlayingAudio,
   onExpand,
   tracks,
   tracksLoading,
@@ -236,6 +273,9 @@ function AlbumRow({
   downloadStates: Record<string, DownloadState>
   onDownloadAlbum: (a: YtAlbumHit) => void
   onDownloadTrack: (hit: YtHit, album: YtAlbumHit) => void
+  onPlayTrack?: (hit: YtHit) => void
+  activeVideoId?: string | null
+  isPlayingAudio?: boolean
   onExpand: (a: YtAlbumHit) => void
   tracks: YtHit[] | undefined
   tracksLoading: boolean
@@ -340,10 +380,24 @@ function AlbumRow({
               const onDisk = albumTrackFileOnDisk(album.title, hit, libraryScan)
               const isActive = status === 'finding' || status === 'downloading' || status === 'converting' || status === 'saving' || status === 'queued'
               const isDone = status === 'done' || onDisk
+              const active = activeVideoId === hit.video_id
               return (
                 <li key={hit.video_id} className="albumTrackItem">
                   <span className="albumTrackTitle" title={hit.title}>{hit.title}</span>
                   <span className="albumTrackDur">{hit.duration_label}</span>
+                  <div className="albumTrackPlayCell">
+                    {onDisk && onPlayTrack && (
+                      <button
+                        type="button"
+                        className={`trackPlayBtn ${active && isPlayingAudio ? 'trackPlayBtn--active' : ''}`}
+                        onClick={() => onPlayTrack(hit)}
+                        aria-label={active && isPlayingAudio ? `Pause ${hit.title}` : `Play ${hit.title}`}
+                        title={active && isPlayingAudio ? 'Pause' : 'Play'}
+                      >
+                        {active && isPlayingAudio ? <RowPauseIcon /> : <RowPlayIcon />}
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className={`albumTrackDlBtn ${isDone ? 'albumTrackDlBtn--done' : ''}`}
@@ -382,6 +436,20 @@ function App() {
   const inputRef = useRef<HTMLInputElement>(null)
   /** Bumps on each search so background album-track prefetch ignores stale runs. */
   const albumPrefetchEpochRef = useRef(0)
+
+  const {
+    audioRef,
+    nowPlaying,
+    playing,
+    currentTime,
+    duration,
+    error: playerError,
+    play: playLocalTrack,
+    toggle: togglePlayer,
+    seek: seekPlayer,
+    stop: stopPlayer,
+    formatTime,
+  } = useMusicPlayer(libraryScan)
 
   const refreshLibraryScan = useCallback(async () => {
     try {
@@ -664,6 +732,7 @@ function App() {
 
   return (
     <div className="app">
+      <audio ref={audioRef} className="srAudio" preload="none" />
       <header className="appHeader" data-tauri-drag-region>
         <div className="appBrand" data-tauri-drag-region>
           <span className="appBrandName">Mulib</span>
@@ -682,7 +751,7 @@ function App() {
         )}
       </header>
 
-      <main className="appMain">
+      <main className={`appMain ${nowPlaying ? 'appMain--hasPlayer' : ''}`}>
         {ytdlpStatus === 'error' && ytdlpError && (
           <div className="errorBanner errorBanner--runtime" role="alert">
             {ytdlpError}
@@ -769,13 +838,17 @@ function App() {
                 {visibleResults.map((item, i) => {
                   if (item.kind === 'song') {
                     const { kind: _k, ...hit } = item
+                    const onDisk = songFileOnDisk(hit, libraryScan)
                     return (
                       <TrackRow
                         key={hit.video_id}
                         hit={hit}
                         downloadState={downloadStates[hit.video_id] ?? null}
                         onDownload={handleDownload}
-                        onDisk={songFileOnDisk(hit, libraryScan)}
+                        onDisk={onDisk}
+                        onPlay={onDisk ? playLocalTrack : undefined}
+                        activeVideoId={nowPlaying?.video_id ?? null}
+                        isPlayingAudio={playing}
                         index={i}
                       />
                     )
@@ -787,6 +860,9 @@ function App() {
                       downloadStates={downloadStates}
                       onDownloadAlbum={handleDownloadAlbum}
                       onDownloadTrack={handleDownloadTrackFromAlbum}
+                      onPlayTrack={playLocalTrack}
+                      activeVideoId={nowPlaying?.video_id ?? null}
+                      isPlayingAudio={playing}
                       onExpand={ensureAlbumTracksLoaded}
                       tracks={albumTracks[item.browse_id]}
                       tracksLoading={albumTracksLoading[item.browse_id] ?? false}
@@ -809,6 +885,18 @@ function App() {
           </div>
         )}
       </main>
+
+      <NowPlayingBar
+        nowPlaying={nowPlaying}
+        playing={playing}
+        currentTime={currentTime}
+        duration={duration}
+        error={playerError}
+        onToggle={() => void togglePlayer()}
+        onSeek={seekPlayer}
+        onStop={stopPlayer}
+        formatTime={formatTime}
+      />
     </div>
   )
 }

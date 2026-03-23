@@ -30,6 +30,24 @@ export function trackFileExpectedName(hit: {
   return expectedMp3Filename(hit)
 }
 
+/** Where the file lives under `Music/mulib` (root vs album subfolder). */
+export function resolvePlayableLocation(
+  hit: { title: string; artist?: string | null; mp3_filename?: string | null },
+  scan: MulibLibraryScan | null,
+): { filename: string; albumFolderName: string | null } | null {
+  if (!scan) return null
+  const filename = trackFileExpectedName(hit)
+  if (scan.root_mp3.includes(filename)) {
+    return { filename, albumFolderName: null }
+  }
+  for (const a of scan.albums) {
+    if (a.files.includes(filename)) {
+      return { filename, albumFolderName: a.folder_name }
+    }
+  }
+  return null
+}
+
 /** Folder name under Music/mulib for an album (matches `album_dir_for_title`). */
 export function albumFolderNameFromTitle(albumTitle: string): string {
   const t = albumTitle.trim()

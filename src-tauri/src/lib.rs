@@ -810,6 +810,45 @@ fn mulib_scan_library(app: AppHandle) -> Result<MulibLibraryScan, String> {
   Ok(MulibLibraryScan { root_mp3, albums })
 }
 
+fn validate_mulib_rel_segment(s: &str, label: &str) -> Result<(), String> {
+  if s.is_empty() {
+    return Err(format!("Invalid {label}"));
+  }
+  if s.contains("..") || s.contains('/') || s.contains('\\') {
+    return Err(format!("Invalid {label}"));
+  }
+  Ok(())
+}
+
+/// Absolute path to an existing `.mp3` under `Music/mulib` (for `convertFileSrc` playback).
+/// Args are flattened for Tauri IPC (`mp3Filename` / `albumFolderName` from JS).
+#[tauri::command]
+fn mulib_resolve_track_path(
+  app: AppHandle,
+  mp3_filename: String,
+  album_folder_name: Option<String>,
+) -> Result<String, String> {
+  validate_mulib_rel_segment(&mp3_filename, "file name")?;
+  let root = mulib_library_dir(&app);
+  let path = if let Some(folder) = album_folder_name
+    .as_ref()
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty())
+  {
+    validate_mulib_rel_segment(folder, "album folder")?;
+    root.join(folder).join(&mp3_filename)
+  } else {
+    root.join(&mp3_filename)
+  };
+  if !path.is_file() {
+    return Err(format!("File not found: {}", path.display()));
+  }
+  path
+    .canonicalize()
+    .map(|p| p.to_string_lossy().to_string())
+    .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -822,6 +861,7 @@ pub fn run() {
       ytdlp_download_album,
       ytdlp_download_audio,
       mulib_scan_library,
+      mulib_resolve_track_path,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
