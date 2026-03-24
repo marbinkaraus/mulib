@@ -12,11 +12,13 @@
 
 ---
 
-[Releases](https://github.com/marbinkaraus/mulib/releases) · [News](#news) · [Quick start](#quick-start) · [Gatekeeper help](#gatekeeper-help) · [Demo](#demo) · [FAQ](#faq) · [Contributing](#contributing) · [Acknowledgements](#acknowledgements) · [License](#license)
+[Releases](https://github.com/marbinkaraus/mulib/releases) · [News](#news) · [Quick start](#quick-start) · [Gatekeeper help](#gatekeeper-help) · [Demo](#demo) · [FAQ](#faq) · [Contributing](#contributing) · [Acknowledgements](#acknowledgements) · [Legal](#legal) · [License](#license)
 
 ---
 
 Mulib is **free** and built for **Mac**. Get the app from [**Releases**](https://github.com/marbinkaraus/mulib/releases) — pick the download that matches your Mac (**Apple Silicon** or **Intel**) when both are listed.
+
+**What it is:** an **educational / test** project—a hands-on example of how **local music library software** could work (search, library UI, files on disk), not a commercial music service. See **[DISCLAIMER.md](DISCLAIMER.md)** for how that fits with lawful use.
 
 </div>
 
@@ -79,20 +81,34 @@ This clears the `com.apple.quarantine` extended attribute from `Mulib.app`. Adju
 
 ## FAQ
 
-> [!IMPORTANT]
-> **Use of downloaded content:** Mulib is free software from this repository. How you use downloaded material must follow the **rules of the services and content you access** — you’re responsible for complying with those terms and with the law where you live.
+> [!CAUTION]
+> **Music and downloads:** Mulib is shared for **testing and learning** how local music software can work; it does **not** give you permission to infringe copyright or break the law. **You are solely responsible** for what you download and whether that use is legal where you live and under the platforms’ rules. The maintainers **do not** encourage piracy and **are not liable** for your choices. Read the full **[disclaimer](DISCLAIMER.md)** before using the app.
+
+<details>
+<summary><strong>Is this app “for real” use or just testing?</strong></summary>
+
+It’s built as an **educational and technical demo**: a **testbed** for ideas you’d see in **real** music apps (local library, search, downloads)—useful for **experimenting** and understanding how such software could work. It is **not** a licensed commercial streaming product. **Lawful use** (including what you may download) is still **your** responsibility; see **[DISCLAIMER.md](DISCLAIMER.md)**.
+
+</details>
+
+<details>
+<summary><strong>Is downloading music with Mulib legal?</strong></summary>
+
+**It depends on what you download, where you live, and what rights you have.** Downloading copyrighted tracks without permission from the rightsholder (or without another valid legal basis) **may be illegal** in many places and can **violate service terms**. This project **does not** provide legal advice. If you are unsure, **do not download** until you know you are allowed to. Details: **[DISCLAIMER.md](DISCLAIMER.md)**.
+
+</details>
 
 <details>
 <summary><strong>What does Mulib do?</strong></summary>
 
-It helps you **find music** and **download it to your Mac** so you can build a **local library** you control.
+It helps you **find music** and **download it to your Mac** so you can build a **local library** you control—the kind of flow a **real** desktop music app might implement. The project is aimed at **learning and testing** that architecture; see **[DISCLAIMER.md](DISCLAIMER.md)** for how to use it responsibly.
 
 </details>
 
 <details>
 <summary><strong>Do I need a subscription?</strong></summary>
 
-Mulib is **free software** from this repository. There is no paid subscription for the app itself. Your obligations around content and services are described in the note above.
+Mulib is **free software** from this repository. There is no paid subscription for the app itself. Your obligations around content, copyright, and lawful use are in **[DISCLAIMER.md](DISCLAIMER.md)** and the caution note above.
 
 </details>
 
@@ -121,6 +137,17 @@ I’m glad you’re interested. **Ideas, feedback, and bug reports** help a lot 
 ## Acknowledgements
 
 Mulib stands on great open tools and libraries, including [**Tauri**](https://tauri.app/), [**yt-dlp**](https://github.com/yt-dlp/yt-dlp), [**ytmusicapi**](https://github.com/sigma67/ytmusicapi), and [**python-build-standalone**](https://github.com/astral-sh/python-build-standalone). Thank you to everyone who builds and maintains them.
+
+---
+
+## Legal
+
+> [!NOTE]
+> This section summarizes how the project is offered; it is **not** legal advice.
+
+- **[Disclaimer](DISCLAIMER.md)** — **Purpose** (educational / testing demo of local music software), **music and downloads** (sole user responsibility; no permission to infringe copyright; maintainers not liable), no warranty, no affiliation with YouTube/Google. Full text also covers the [MIT License](LICENSE).
+- **[Third-party notices](THIRD_PARTY_NOTICES.md)** — Licenses for bundled dependencies (Python, yt-dlp, ytmusicapi, etc.).
+- **[Security](SECURITY.md)** — How to report a **security vulnerability** privately ([GitHub Security](https://github.com/marbinkaraus/mulib/security)).
 
 ---
 
