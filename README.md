@@ -2,7 +2,7 @@
 
 <img src="src-tauri/icons/128x128.png" alt="Mulib" width="120" height="120" />
 
-# Build your personal music library.
+# Build your personal music library with Mulib.
 
 **Search for songs, artists or albums and download them to your local library. You have full control over your music.**
 
