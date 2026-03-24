@@ -30,10 +30,10 @@ The project is **not** offered as a way to obtain pirated or unlicensed material
 
 **The authors, copyright holders, and contributors of Mulib:**
 
-- **Do not** encourage, solicit, or endorse any illegal downloading or copyright infringement  
-- **Do not** monitor, vet, or approve your use of the Software  
-- **Are not** a party to your relationship with any platform, label, or rightsholder  
-- **Are not responsible** for claims, losses, fines, or legal action arising from **your** use of the Software or **your** handling of any content  
+- **Do not** encourage, solicit, or endorse any illegal downloading or copyright infringement
+- **Do not** monitor, vet, or approve your use of the Software
+- **Are not** a party to your relationship with any platform, label, or rightsholder
+- **Are not responsible** for claims, losses, fines, or legal action arising from **your** use of the Software or **your** handling of any content
 
 If you do not accept sole responsibility for your use of Mulib and any media you obtain with it, **do not use this Software.**
 
@@ -41,7 +41,7 @@ If you do not accept sole responsibility for your use of Mulib and any media you
 
 ## Software and warranties
 
-Mulib is provided under the [MIT License](LICENSE). That license applies to **this project’s source code** as published in the repository. It does **not** grant any rights to music, video, or other content from third-party services.
+Mulib is provided under the [MIT License](../LICENSE). That license applies to **this project’s source code** as published in the repository. It does **not** grant any rights to music, video, or other content from third-party services.
 
 The Software is provided **“as is”**, without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. See the MIT License for the full warranty disclaimer.
 
@@ -51,9 +51,9 @@ The Software is provided **“as is”**, without warranty of any kind, express 
 
 **You are solely responsible** for how you use Mulib and any content you access, download, or store. That includes complying with:
 
-- Applicable **laws and regulations** where you live or operate  
-- **Terms of service**, **acceptable use policies**, and **platform rules** of any site or service you use  
-- **Copyright**, **licensing**, and **rights** of creators, rightsholders, and platforms  
+- Applicable **laws and regulations** where you live or operate
+- **Terms of service**, **acceptable use policies**, and **platform rules** of any site or service you use
+- **Copyright**, **licensing**, and **rights** of creators, rightsholders, and platforms
 
 ---
 

@@ -8,8 +8,8 @@ If you believe you have found a **security vulnerability** in Mulib (for example
 
 Include:
 
-- A short description of the issue and its impact  
-- Steps to reproduce or a proof of concept, if you can share one safely  
-- Affected version or commit, if known  
+- A short description of the issue and its impact
+- Steps to reproduce or a proof of concept, if you can share one safely
+- Affected version or commit, if known
 
 We will treat reports seriously and respond as capacity allows. This process is for **security defects in the software**, not for general bugs or legal questions about how the app is used.

@@ -1,6 +1,6 @@
 # Third-party notices
 
-Mulib’s own source code is released under the [MIT License](LICENSE). This document lists major third-party software shipped with or used to build Mulib, and the license identified for each at the time of writing.
+Mulib’s own source code is released under the [MIT License](../LICENSE). This document lists major third-party software shipped with or used to build Mulib, and the license identified for each at the time of writing.
 
 Update this file when you upgrade bundled runtimes, change direct dependencies, or regenerate lockfiles. Full transitive dependency graphs live in `src-tauri/Cargo.lock` and `pnpm-lock.yaml`; each crate or package lists its SPDX license on [crates.io](https://crates.io) or the npm registry.
 
